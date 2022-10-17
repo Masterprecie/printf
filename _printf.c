@@ -1,52 +1,48 @@
 #include "main.h"
-#include <stdio.h>
-
 /**
- * _printf - takes a string and args of each '%'
- * and prints them
- * @format: initial string containing % +
- * char denoting type and number of args
- * @...: variable list of arguments
- *
- * Return: number of characters printed.
+ * _printf - function that prints based on format specifier
+ * @format: takes in format specifier
+ * Return: return pointer to index
  */
 int _printf(const char *format, ...)
 {
-	int i, j;
-	int count = 0;
-	va_list lst;
-	interface ids[] = {
-		 {'c', _print_char},
-		 {'s', _print_string},
-		 {'d', _print_int},
-		 {'i', _print_int},
-		 {'%', _print_mod},
-		 {'\0', NULL}};
-
-	va_start(lst, format);
-	for (i = 0; format[i]; i++)
+	char buffer[1024];
+	int i, j = 0, a = 0, *index = &a;
+	va_list valist;
+	vtype_t spec[] = {
+		 {'c', format_c}, {'d', format_d}, {'s', format_s}, {'i', format_d}, {'u', format_u}, {'%', format_perc}, {'x', format_h}, {'X', format_ch}, {'o', format_o}, {'b', format_b}, {'p', format_p}, {'r', format_r}, {'R', format_R}, {'\0', NULL}};
+	if (!format)
+		return (-1);
+	va_start(valist, format);
+	for (i = 0; format[i] != '\0'; i++)
+	{
+		for (; format[i] != '%' && format[i] != '\0'; *index += 1, i++)
+		{
+			if (*index == 1024)
+			{
+				_write_buffer(buffer, index);
+				reset_buffer(buffer);
+				*index = 0;
+			}
+			buffer[*index] = format[i];
+		}
+		if (format[i] == '\0')
+			break;
 		if (format[i] == '%')
 		{
 			i++;
-			for (; format[i] != '\0'; i++)
+			for (j = 0; spec[j].tp != '\0'; j++)
 			{
-				for (j = 0; ids[j].id != '\0'; j++)
-					if (format[i] == ids[j].id)
-					{
-						count += ids[j].fn(lst);
-						break;
-					}
-				if (ids[j].id)
+				if (format[i] == spec[j].tp)
+				{
+					spec[j].f(valist, buffer, index);
 					break;
+				}
 			}
-			if (format[i] == '\0')
-				return (-1);
 		}
-		else
-		{
-			write(1, &format[i], 1);
-			count += 1;
-		}
-	va_end(lst);
-	return (count);
+	}
+	va_end(valist);
+	buffer[*index] = '\0';
+	_write_buffer(buffer, index);
+	return (*index);
 }

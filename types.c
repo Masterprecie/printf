@@ -1,91 +1,131 @@
 #include "main.h"
 #include <stdio.h>
-
+#include <stdlib.h>
 /**
- * _print_char - prints character from the corresponging
- * argument from the arguments list
- * @ls: list of arguments, va_list
+ * format_s - specificer s
+ * @valist: valist
+ * @buffer: buffer
+ * @index: index
  *
- * Return: the number of printed chars, int
+ * Return: void
  */
-int _print_char(va_list ls)
+void format_s(va_list valist, char *buffer, int *index)
 {
-	char c = va_arg(ls, int);
+	int i, j;
+	char *s;
 
-	write(1, &c, 1);
-	return (1);
+	s = va_arg(valist, char *);
+	if (s == NULL)
+		s = "(null)";
+	for (i = *index, j = 0; s[j] != '\0'; *index += 1, i++, j++)
+	{
+		if (*index == 1024)
+		{
+			_write_buffer(buffer, index);
+			reset_buffer(buffer);
+			*index = 0;
+		}
+		buffer[*index] = s[j];
+	}
+}
+/**
+ * format_c - specificer c
+ * @valist: valist
+ * @buffer: buffer
+ * @index: index
+ *
+ * Return: void
+ */
+void format_c(va_list valist, char *buffer, int *index)
+{
+	char s;
+
+	s = va_arg(valist, int);
+	if (*index == 1024)
+	{
+		_write_buffer(buffer, index);
+		reset_buffer(buffer);
+		*index = 0;
+	}
+	buffer[*index] = s;
+	*index += 1;
 }
 
 /**
- * _print_mod - prints "%" character
- * @ls: list of arguments, va_list
- *
- * Return: the number of printed chars, int
+ * format_d - function that returns an int to signed decimal
+ * @valist: arguments passed
+ * @buffer: values stored
+ * @index: tracks index position
  */
-int _print_mod(va_list ls)
+void format_d(va_list valist, char *buffer, int *index)
 {
-	char c = '%';
+	int i, j, numlen;
+	char *num_str;
 
-	(void)ls;
+	i = va_arg(valist, int);
 
-	write(1, &c, 1);
-	return (1);
+	numlen = num_len(i);
+	if (i < 0)
+	{
+		numlen += 1;
+	}
+	num_str = malloc(numlen * sizeof(char));
+	if (num_str == NULL)
+		return;
+	itos(num_str, i);
+	for (i = *index, j = 0; j < numlen; *index += 1, i++, j++)
+	{
+		if (*index == 1024)
+		{
+			_write_buffer(buffer, index);
+			reset_buffer(buffer);
+			*index = 0;
+		}
+		buffer[*index] = num_str[j];
+	}
+	free(num_str);
+}
+/**
+ * format_perc - percent
+ * @valist: valist
+ * @buffer: write to buffer
+ * @index: the index
+ * Return: void
+ */
+void format_perc(
+	 __attribute__((unused)) va_list valist, char *buffer, int *index)
+{
+	buffer[*index] = '%';
+	*index += 1;
 }
 
 /**
- * _print_string - prints the string, char by char
- * @ls: list of arguments, va_list
- *
- * Return: the number of printed chars, int
+ * format_R - functtion that converts a string into rot13
+ * @valist: argument passed
+ * @buffer: values stored
+ * @index: tracks index position
  */
-int _print_string(va_list ls)
+void format_R(va_list valist, char *buffer, int *index)
 {
-	int i, count = 0;
-	char *sbuf = va_arg(ls, char *);
+	char *s;
+	int i, j;
 
-	if (sbuf == NULL)
-		sbuf = "(null)";
+	char *s1 = "abcdefghijklmABCDEFGHIJKLM ,?!;'@-=+\"\\$%^&*()`~<>/:[]{}_|.\n";
+	char *s2 = "nopqrstuvwxyzNOPQRSTUVWXYZ ,?!;'@-=+\"\\$%^&*()`~<>/:[]{}_|.\n";
 
-	for (i = 0; sbuf[i]; i++)
+	s = va_arg(valist, char *);
+	for (i = 0; s[i] != '\0'; i++, *index += 1)
 	{
-		write(1, &sbuf[i], 1);
-		count += 1;
+		for (j = 0; s1[j] != '\0'; j++)
+		{
+			if (s[i] == s1[j])
+			{
+				buffer[*index] = s2[j];
+			}
+			else if (s[i] == s2[j])
+			{
+				buffer[*index] = s1[j];
+			}
+		}
 	}
-
-	return (count);
-}
-
-/**
- * _print_int - prints a decimal integer
- * @ls: list of arguments, va_list
- *
- * Return: the number of printed chars, int
- */
-int _print_int(va_list ls)
-{
-	int a, expo = 1, len = 0;
-	unsigned int n;
-	char pr;
-
-	a = va_arg(ls, int);
-
-	if (a < 0)
-	{
-		pr = '-';
-		len = len + write(1, &pr, 1);
-		n = a * -1;
-	}
-	else
-		n = a;
-	while (n / expo > 9)
-		expo *= 10;
-
-	while (expo != 0)
-	{
-		pr = n / expo + '0';
-		len = len + write(1, &pr, 1);
-		n = n % expo;
-		expo = expo / 10;
-	}
-	return (len);
 }
