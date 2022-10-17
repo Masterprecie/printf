@@ -1,7 +1,6 @@
 **#0x11. C - printf**
 
 ***Authorized functions and macros***
-
 *write (man 2 write)
 *malloc (man 3 malloc)
 *free (man 3 free)
