@@ -7,7 +7,8 @@ int _printf(const char *format, ...);
 
 DESCRIPTION
 
-printf() functions are inbuilt library functions in C programming language which are available in C library by default. These functions are declared and related macros are defined in stdio.h which is a header file in C language.
+printf() functions are inbuilt library functions in C programming language which are available in C library by default. 
+These functions are declared and related macros are defined in stdio.h which is a header file in C language.
 We have to include stdio.h file as shown in below C program to make use of these printf() and scanf() library functions in C language.
 In C programming language, printf() function used to print the character, string, float, integer, octal and hexadecimal values onto the output screen.
 We use printf() function with %d format specifier to display the value of an integer variable.
