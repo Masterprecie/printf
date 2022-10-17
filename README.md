@@ -11,4 +11,6 @@
 
 **Compilation**
 Your code will be compiled this way:
+```shell
 $ gcc -Wall -Werror -Wextra -pedantic -std=gnu89 *.c
+```
