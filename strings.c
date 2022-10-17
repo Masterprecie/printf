@@ -1,203 +1,188 @@
 #include "main.h"
 
-unsigned int convert_s(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_S(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_r(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len);
-unsigned int convert_R(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len);
-
+/****************** PRINT POINTER ******************/
 /**
- * convert_s - Converts an argument to a string and
- *             stores it to a buffer contained in a struct.
- * @args: A va_list pointing to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
+ * print_pointer - Prints the value of a pointer variable
+ * @types: List a of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed.
  */
-unsigned int convert_s(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len)
+int print_pointer(va_list types, char buffer[],
+						int flags, int width, int precision, int size)
 {
-	char *str, *null = "(null)";
-	int size;
-	unsigned int ret = 0;
+	char extra_c = 0, padd = ' ';
+	int ind = BUFF_SIZE - 2, length = 2, padd_start = 1; /* length=2, for '0x' */
+	unsigned long num_addrs;
+	char map_to[] = "0123456789abcdef";
+	void *addrs = va_arg(types, void *);
 
-	(void)flags;
-	(void)len;
+	UNUSED(width);
+	UNUSED(size);
 
-	str = va_arg(args, char *);
-	if (str == NULL)
-		return (_memcpy(output, null, 6));
+	if (addrs == NULL)
+		return (write(1, "(nil)", 5));
 
-	for (size = 0; *(str + size);)
-		size++;
+	buffer[BUFF_SIZE - 1] = '\0';
+	UNUSED(precision);
 
-	ret += print_string_width(output, flags, wid, prec, size);
+	num_addrs = (unsigned long)addrs;
 
-	prec = (prec == -1) ? size : prec;
-	while (*str != '\0' && prec > 0)
+	while (num_addrs > 0)
 	{
-		ret += _memcpy(output, str, 1);
-		prec--;
-		str++;
+		buffer[ind--] = map_to[num_addrs % 16];
+		num_addrs /= 16;
+		length++;
 	}
 
-	ret += print_neg_width(output, ret, flags, wid);
+	if ((flags & F_ZERO) && !(flags & F_MINUS))
+		padd = '0';
+	if (flags & F_PLUS)
+		extra_c = '+', length++;
+	else if (flags & F_SPACE)
+		extra_c = ' ', length++;
 
-	return (ret);
+	ind++;
+
+	/*return (write(1, &buffer[i], BUFF_SIZE - i - 1));*/
+	return (write_pointer(buffer, ind, length,
+								 width, flags, padd, extra_c, padd_start));
 }
 
+/************************* PRINT NON PRINTABLE *************************/
 /**
- * convert_S - Converts an argument to a string and
- *             stores it to a buffer contained in a struct.
- * @args: A va_list pointing to the argument to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- *
- * Description: Non-printable characteres (ASCII values < 32 or >= 127)
- *              are stored as \x followed by the ASCII code value in hex.
+ * print_non_printable - Prints ascii codes in hexa of non printable chars
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed
  */
-unsigned int convert_S(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len)
+int print_non_printable(va_list types, char buffer[],
+								int flags, int width, int precision, int size)
 {
-	char *str, *null = "(null)", *hex = "\\x", zero = '0';
-	int size, index;
-	unsigned int ret = 0;
+	int i = 0, offset = 0;
+	char *str = va_arg(types, char *);
 
-	(void)len;
-	str = va_arg(args, char *);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
+
 	if (str == NULL)
-		return (_memcpy(output, null, 6));
+		return (write(1, "(null)", 6));
 
-	for (size = 0; str[size];)
-		size++;
-
-	ret += print_string_width(output, flags, wid, prec, size);
-
-	prec = (prec == -1) ? size : prec;
-	for (index = 0; *(str + index) != '\0' && index < prec; index++)
+	while (str[i] != '\0')
 	{
-		if (*(str + index) < 32 || *(str + index) >= 127)
+		if (is_printable(str[i]))
+			buffer[i + offset] = str[i];
+		else
+			offset += append_hexa_code(str[i], buffer, i + offset);
+
+		i++;
+	}
+
+	buffer[i + offset] = '\0';
+
+	return (write(1, buffer, i + offset));
+}
+
+/************************* PRINT REVERSE *************************/
+/**
+ * print_reverse - Prints reverse string.
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Numbers of chars printed
+ */
+
+int print_reverse(va_list types, char buffer[],
+						int flags, int width, int precision, int size)
+{
+	char *str;
+	int i, count = 0;
+
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(size);
+
+	str = va_arg(types, char *);
+
+	if (str == NULL)
+	{
+		UNUSED(precision);
+
+		str = ")Null(";
+	}
+	for (i = 0; str[i]; i++)
+		;
+
+	for (i = i - 1; i >= 0; i--)
+	{
+		char z = str[i];
+
+		write(1, &z, 1);
+		count++;
+	}
+	return (count);
+}
+/************************* PRINT A STRING IN ROT13 *************************/
+/**
+ * print_rot13string - Print a string in rot13.
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Numbers of chars printed
+ */
+int print_rot13string(va_list types, char buffer[],
+							 int flags, int width, int precision, int size)
+{
+	char x;
+	char *str;
+	unsigned int i, j;
+	int count = 0;
+	char in[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	char out[] = "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm";
+
+	str = va_arg(types, char *);
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
+
+	if (str == NULL)
+		str = "(AHYY)";
+	for (i = 0; str[i]; i++)
+	{
+		for (j = 0; in[j]; j++)
 		{
-			ret += _memcpy(output, hex, 2);
-			if (*(str + index) < 16)
-				ret += _memcpy(output, &zero, 1);
-			ret += convert_ubase(output, *(str + index),
-										"0123456789ABCDEF", flags, 0, 0);
-			continue;
-		}
-		ret += _memcpy(output, (str + index), 1);
-	}
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
-}
-
-/**
- * convert_r - Reverses a string and stores it
- *             to a buffer contained in a struct.
- * @args: A va_list pointing to the string to be reversed.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A length modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- */
-unsigned int convert_r(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len)
-{
-	char *str, *null = "(null)";
-	int size, end, i;
-	unsigned int ret = 0;
-
-	(void)flags;
-	(void)len;
-
-	str = va_arg(args, char *);
-	if (str == NULL)
-		return (_memcpy(output, null, 6));
-
-	for (size = 0; *(str + size);)
-		size++;
-
-	ret += print_string_width(output, flags, wid, prec, size);
-
-	end = size - 1;
-	prec = (prec == -1) ? size : prec;
-	for (i = 0; end >= 0 && i < prec; i++)
-	{
-		ret += _memcpy(output, (str + end), 1);
-		end--;
-	}
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
-}
-
-/**
- * convert_R - Converts a string to ROT13 and stores
- *             it to a buffer contained in a struct.
- * @args: A va_list pointing to the string to be converted.
- * @flags: Flag modifiers.
- * @wid: A width modifier.
- * @prec: A precision modifier.
- * @len: A lenth modifier.
- * @output: A buffer_t struct containing a character array.
- *
- * Return: The number of bytes stored to the buffer.
- */
-unsigned int convert_R(va_list args, buffer_t *output,
-							  unsigned char flags, int wid, int prec, unsigned char len)
-{
-	char *alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	char *rot13 = "nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM";
-	char *str, *null = "(null)";
-	int i, j, size;
-	unsigned int ret = 0;
-
-	(void)flags;
-	(void)len;
-
-	str = va_arg(args, char *);
-	if (str == NULL)
-		return (_memcpy(output, null, 6));
-
-	for (size = 0; *(str + size);)
-		size++;
-
-	ret += print_string_width(output, flags, wid, prec, size);
-
-	prec = (prec == -1) ? size : prec;
-	for (i = 0; *(str + i) != '\0' && i < prec; i++)
-	{
-		for (j = 0; j < 52; j++)
-		{
-			if (*(str + i) == *(alpha + j))
+			if (in[j] == str[i])
 			{
-				ret += _memcpy(output, (rot13 + j), 1);
+				x = out[j];
+				write(1, &x, 1);
+				count++;
 				break;
 			}
 		}
-		if (j == 52)
-			ret += _memcpy(output, (str + i), 1);
+		if (!in[j])
+		{
+			x = str[i];
+			write(1, &x, 1);
+			count++;
+		}
 	}
-
-	ret += print_neg_width(output, ret, flags, wid);
-
-	return (ret);
+	return (count);
 }
