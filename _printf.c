@@ -18,9 +18,9 @@ int _printf(const char *format, ...)
 	interface ids[] = {
 		 {'c', _print_char},
 		 {'s', _print_string},
-		 {'%', _print_mod},
 		 {'d', _print_int},
 		 {'i', _print_int},
+		 {'%', _print_mod},
 		 {'\0', NULL}};
 
 	va_start(lst, format);
@@ -47,7 +47,6 @@ int _printf(const char *format, ...)
 			write(1, &format[i], 1);
 			count += 1;
 		}
-
 	va_end(lst);
 	return (count);
 }
